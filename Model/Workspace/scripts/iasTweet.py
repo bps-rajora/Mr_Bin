@@ -37,7 +37,7 @@ signInButton.click()
 # time.sleep(5)
 
 usernameInput = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[autocomplete='username']")))
-usernameInput.send_keys('TrashCam2024')
+usernameInput.send_keys('Mr_Bin2024')
 
 nextButton = driver.find_element(By.XPATH, "//span[text()='Next']")
 nextButton.click()

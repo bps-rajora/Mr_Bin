@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore
 import random
 
 # INITIALIZE FIREBASE ADMIN
-cred = credentials.Certificate(r'D:\TrashCam\Dashboard\work\key2.json')  # REPLACE WITH YOUR FIREBASE CREDENTIALS
+cred = credentials.Certificate(r'D:\Mr_Bin\Dashboard\work\key2.json')  # REPLACE WITH YOUR FIREBASE CREDENTIALS
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 

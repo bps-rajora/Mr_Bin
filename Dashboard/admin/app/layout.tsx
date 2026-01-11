@@ -5,7 +5,7 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
-  title: "TrashCam",
+  title: "Mr_Bin",
   description: "Created by UrbanEco",
 };
 

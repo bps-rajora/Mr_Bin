@@ -1,11 +1,34 @@
-/Model/Workspace/Datasets
-/Model/Workspace/Test
-/Model/cam.py
-/Model/cam2.py
-/Model/Not-In-Use
-/Model/runs
-/Model/Maps/Heat-Map/heatMap.html
-/Model/Maps/Location-Map/locationMap.html
-/Model/myVenv
-/Dashboard/work
-/Dashboard/user2
+# --- Dependencies ---
+node_modules/
+**/myVenv/
+**/__pycache__/
+
+# --- Expo & Mobile ---
+.expo/
+dist/
+web-build/
+metro-cache/
+android/
+ios/
+
+# --- ML Model & Data ---
+/Model/runs/
+/Model/Workspace/Datasets/
+/Model/Workspace/Test/
+/Model/Not-In-Use/
+
+# --- Environment & Secrets ---
+.env
+.env.local
+firebaseConfig.js (if it contains your private API keys)
+
+# --- Generated Maps ---
+/Model/Maps/Heat-Map/*.html
+/Model/Maps/Location-Map/*.html
+
+# Firebase Admin SDK private keys
+*trashcam-b6806-firebase-adminsdk-fbsvc-a370b885ac.json
+!app.json
+!package.json
+!package-lock.json
+!eas.json

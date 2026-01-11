@@ -78,10 +78,10 @@ def plot_route(route_info, coord_string=None):
             folium.Marker(location=(lat, lon), icon=folium.Icon(color='blue')).add_to(route_map)
 
     
-    route_map.save("route_map.html")
+    route_map.save("Dashboard/admin/public/Maps/route_map.html")
 
 if __name__ == "__main__":
-    API_KEY = ""  
+    API_KEY = "6e22897b06c94ca8a27686d7d4890eaf"  
     route_info = get_route(API_KEY)
     
     if isinstance(route_info, dict):

@@ -1,151 +1,126 @@
-import boto3
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage #
 import os
 import json
 import time
 
-source_bucket_trashcam = "trashcambucket"
-source_folder_trashcam = "userDetected/"  # Folder containing already processed files
+# 1. Firebase Configuration
+# Replace 'your-project-id.appspot.com' with your actual bucket ID from Firebase Console
+bucket_name = "Mr_Bin-7ec3f.appspot.com" 
+firebase_cred_path = r"C:/Users/bps_r/Desktop/Mr_Bin/firebase-key.json" # Point to the actual file
 
-source_bucket_camdetected = "trashcambucket"
-source_folder_camdetected = "Camdetected/"  # Folder containing already processed files
-
-firebase_cred_path = r"D:\trashcam\trashcam-7ec3f-firebase-adminsdk-1cvbd-2bd1a3aa2c.json"
-
-
-s3_client = boto3.client("s3")
-
-# Firebase Admin SDK
-if not firebase_admin._apps:  # Check if Firebase app is already initialized
+# 2. Initialize Firebase Admin SDK
+if not firebase_admin._apps:
     cred = credentials.Certificate(firebase_cred_path)
-    firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': bucket_name
+    })
 
-# Initialize Firestore 
+# Initialize Clients
 firestore_client = firestore.client()
+bucket = storage.bucket() #
 
-# already processed files
-processed_files_trashcam = set()
+# Already processed files (to avoid duplicates)
+processed_files_Mr_Bin = set()
 processed_files_camdetected = set()
 
-def process_trashcam_files():
-    global processed_files_trashcam
+def process_Mr_Bin_files():
+    """Processes JSON reports from the 'userDetected/' folder in Firebase Storage"""
+    global processed_files_Mr_Bin
+    
+    # List all blobs in the 'userDetected/' prefix
+    blobs = bucket.list_blobs(prefix="userDetected/")
 
-   
-    s3_objects = s3_client.list_objects_v2(Bucket=source_bucket_trashcam, Prefix=source_folder_trashcam)
+    for blob in blobs:
+        file_key = blob.name
 
-    if "Contents" in s3_objects:
-        for obj in s3_objects["Contents"]:
-            file_key = obj["Key"]
+        # Skip directories or already processed files
+        if file_key.endswith("/") or file_key in processed_files_Mr_Bin:
+            continue
 
-           
-            if file_key.endswith("/") or file_key in processed_files_trashcam:
-                continue
+        file_name = os.path.basename(file_key)
+        file_name_without_ext = os.path.splitext(file_name)[0]
 
-            file_name = os.path.basename(file_key)  
-            file_name_without_ext = os.path.splitext(file_name)[0]  
-
-          
-            if file_name.endswith(".json"):
-                try:
-                   
-                    s3_object = s3_client.get_object(Bucket=source_bucket_trashcam, Key=file_key)
-                    file_data = s3_object["Body"].read()
-
-                   
-                    json_data = json.loads(file_data.decode("utf-8"))
-
-                    
-                    username = json_data.get("user_metadata", {}).get("username")
-                    if not username:
-                        print(f"Skipping JSON file {file_name}: 'username' field is missing.")
-                        continue
-
-                
-                    doc_ref = (
-                        firestore_client.collection("UserJson")
-                        .document(username)
-                        .collection("reports")
-                        .document(file_name_without_ext)
-                    )
-                    doc_ref.set(json_data)
-
-                    
-                    processed_files_trashcam.add(file_key)
-
-                    print(f"Uploaded JSON file {file_name} to Firestore under 'jsonFiles/{username}/reports'.")
-                except json.JSONDecodeError:
-                    print(f"Skipping invalid JSON file: {file_name}")
-                except Exception as e:
-                    print(f"Error processing file {file_name}: {e}")
-            else:
-                print(f"Skipping non-JSON file: {file_name}")
-    else:
-        print("No files found in the specified S3 folder.")
-
-def process_camdetected_files():
-    global processed_files_camdetected
-
-  
-    s3_objects = s3_client.list_objects_v2(Bucket=source_bucket_camdetected, Prefix=source_folder_camdetected)
-
-    if "Contents" in s3_objects:
-        
-        sorted_objects = sorted(
-            s3_objects["Contents"],
-            key=lambda obj: obj["LastModified"],
-            reverse=True
-        )
-
-        for obj in sorted_objects:
-            file_key = obj["Key"]
-
-            if file_key.endswith("/") or file_key in processed_files_camdetected:
-                continue
-
-            file_name = os.path.basename(file_key)  
-            file_name_without_ext = os.path.splitext(file_name)[0] 
-
+        if file_name.endswith(".json"):
             try:
-                
-                s3_object = s3_client.head_object(Bucket=source_bucket_camdetected, Key=file_key)
-                metadata = s3_object.get("Metadata", {})  # Retrieve user-defined metadata
+                # Download and parse JSON content directly from Firebase Storage
+                file_data = blob.download_as_text()
+                json_data = json.loads(file_data)
 
-                metadata["LastModified"] = s3_object.get("LastModified").isoformat() if s3_object.get("LastModified") else None
-                metadata["ContentType"] = s3_object.get("ContentType", "unknown")
-                metadata["ContentLength"] = s3_object.get("ContentLength", 0)
+                # Extract username for document path
+                username = json_data.get("user_metadata", {}).get("username")
+                if not username:
+                    print(f"Skipping {file_name}: 'username' field missing.")
+                    continue
 
-                
-                camid = metadata.get("camid", "unknown_camid")
-
-                
+                # Upload data to Firestore
                 doc_ref = (
-                    firestore_client.collection("Camjson")
-                    .document(camid)
+                    firestore_client.collection("UserJson")
+                    .document(username)
                     .collection("reports")
                     .document(file_name_without_ext)
                 )
-                doc_ref.set(metadata)
+                doc_ref.set(json_data)
 
-               
-                processed_files_camdetected.add(file_key)
-
-                print(f"Uploaded metadata for the latest image {file_name} to Firestore under 'Camjson/{camid}/reports/{file_name_without_ext}'.")
-                break  
+                processed_files_Mr_Bin.add(file_key)
+                print(f"Synced {file_name} to Firestore (UserJson/{username})")
             except Exception as e:
-                print(f"Error processing image {file_name}: {e}")
-    else:
-        print("No files found in the specified S3 folder.")
+                print(f"Error processing {file_name}: {e}")
 
+def process_camdetected_files():
+    """Processes metadata for images in the 'Camdetected/' folder in Firebase Storage"""
+    global processed_files_camdetected
 
+    blobs = list(bucket.list_blobs(prefix="Camdetected/"))
+    
+    # Sort by time updated (equivalent to LastModified in S3)
+    blobs.sort(key=lambda x: x.updated, reverse=True)
 
+    for blob in blobs:
+        file_key = blob.name
+
+        if file_key.endswith("/") or file_key in processed_files_camdetected:
+            continue
+
+        file_name = os.path.basename(file_key)
+        file_name_without_ext = os.path.splitext(file_name)[0]
+
+        try:
+            # In Firebase, custom metadata is stored in the 'metadata' property
+            custom_metadata = blob.metadata if blob.metadata else {}
+            
+            # Prepare data for Firestore
+            report_data = {
+                "LastModified": blob.updated.isoformat(),
+                "ContentType": blob.content_type,
+                "ContentLength": blob.size,
+                "public_url": blob.public_url, # Useful for the dashboard
+                **custom_metadata
+            }
+
+            camid = custom_metadata.get("camid", "unknown_camid")
+
+            # Upload to Firestore
+            doc_ref = (
+                firestore_client.collection("Camjson")
+                .document(camid)
+                .collection("reports")
+                .document(file_name_without_ext)
+            )
+            doc_ref.set(report_data)
+
+            processed_files_camdetected.add(file_key)
+            print(f"Synced metadata for {file_name} to Firestore (Camjson/{camid})")
+            break # Only process the latest one as per original script logic
+        except Exception as e:
+            print(f"Error processing {file_name}: {e}")
 
 def main():
     while True:
-        print("Checking for new files in Trashcam...")
-        process_trashcam_files()
-        print("Checking for new files in Camdetected...")
+        print("\n--- Checking for new files in Firebase Storage ---")
+        process_Mr_Bin_files()
         process_camdetected_files()
+        time.sleep(10) # Wait 10 seconds between checks
 
 if __name__ == "__main__":
     main()

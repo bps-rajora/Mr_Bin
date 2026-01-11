@@ -1,8 +1,8 @@
-# TrashCam: Intelligent Garbage Detection and Reporting System
+# Mr_Bin: Intelligent Garbage Detection and Reporting System
 
 ## Overview
 
-TrashCam is a cutting-edge technology powered by machine learning algorithms that detects trash piles and reports them to the appropriate authorities in real-time, streamlining the Urban Waste Management System. 
+Mr_Bin is a cutting-edge technology powered by machine learning algorithms that detects trash piles and reports them to the appropriate authorities in real-time, streamlining the Urban Waste Management System. 
 
 
 ## Features
@@ -69,4 +69,4 @@ The system architecture includes:
 
 ## Contact
 
-### For any questions or contributions, please reach out at [sharma15705rahul@gmail.com] [parthratra11@gmail.com].
+### For any questions or contributions, please reach out at [bhanuRajora123@gmail.com] [at0968643@gmail.com].

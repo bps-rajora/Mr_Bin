@@ -1,18 +1,21 @@
-# OLD SCRIPT
-
 from ultralytics import YOLO
 import cv2, cvzone
 import math, os, csv, geocoder, folium 
 import numpy as np
 from datetime import datetime
 
-# cap = cv2.VideoCapture("Workspace/Test/videos/garbage7.mp4")
-# cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture("http://192.168.76.132:4747/video")
-cap = cv2.VideoCapture("http://192.168.137.18:8000")
+# --- CONFIGURATION FOR WIFI/LOCAL SOLUTION ---
+# Corrected the IP format (colon before port) and added '/video' for stability
+cap = cv2.VideoCapture("http://192.168.1.6:8080/video")
 
-model = YOLO(r"D:/TrashCam/Workspace/Trained Models/bests.pt")
-# model = YOLO(os.path.join(os.getcwd(), 'best.pt')) # ANOTHER METHOD
+# Path to your dashboard's public image folder
+# This allows the Next.js frontend to see the images via Wi-Fi/Local storage
+DASHBOARD_IMG_PATH = "Dashboard/admin/public/detections/"
+if not os.path.exists(DASHBOARD_IMG_PATH):
+    os.makedirs(DASHBOARD_IMG_PATH)
+# ---------------------------------------------
+
+model = YOLO("Model/Workspace/Trained Models/bests.pt")
 model.to('cpu')
 
 classNames = ["garbage"]
@@ -37,27 +40,28 @@ detectedLocations = [] # List to store all the already detected locations
 try:
     with open('output.csv', 'r') as locationFile:
         reader = csv.reader(locationFile)
-
         for row in reader:
-            lat, lng = row[3].strip('[]').split(', ')
-            detectedLocations.append([float(lat), float(lng)])
-
+            # Ensure the row has enough data before processing
+            if len(row) >= 4:
+                lat, lng = row[3].strip('[]').split(', ')
+                detectedLocations.append([float(lat), float(lng)])
 except FileNotFoundError:
-    print("output.csv not found")
+    print("output.csv not found, starting fresh.")
 
+# Open CSV in append mode
 outputFile = open('output.csv', 'a', newline='')
 csv_writer = csv.writer(outputFile)
 
 while True:
     success, img = cap.read()
     if not success:
+        print("Failed to grab frame from camera. Check your Wi-Fi connection.")
         break
 
     results = model(img, stream=True)
 
     for r in results:
         boxes = r.boxes
-
         for box in boxes:
             # Get bounding box coordinates
             x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -75,23 +79,39 @@ while True:
 
             # Only consider detections with confidence above threshold
             if conf >= 0.4:
-                # Check if the detection is a duplicate
                 new_detection = (x1, y1, x2, y2)
                 if not is_duplicate_detection(new_detection, detected_heaps):
-                    # If not a duplicate, fetch location, add to detected heaps list and output file
+                    # Fetch location
                     currentLoc = geocoder.ip('me')
 
-                    if currentLoc.latlng not in detectedLocations:
+                    if currentLoc.latlng and currentLoc.latlng not in detectedLocations:
                         latitude, longitude = currentLoc.latlng
+                        
+                        # Generate unique filename using timestamp
+                        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        image_name = f"trash_{timestamp_str}.jpg"
+                        full_save_path = os.path.join(DASHBOARD_IMG_PATH, image_name)
 
-                        if latitude and longitude:
-                            csv_writer.writerow([classNames[cls], conf, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), [latitude, longitude]])
-                            detected_heaps.append(new_detection)
-                            detectedLocations.append(currentLoc.latlng)
+                        # Save the actual frame to the dashboard folder
+                        cv2.imwrite(full_save_path, img)
+                        print(f"New Trash Detected! Saved to: {full_save_path}")
+
+                        # Log to CSV including the local image filename
+                        csv_writer.writerow([
+                            classNames[cls], 
+                            conf, 
+                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
+                            [latitude, longitude],
+                            image_name
+                        ])
+                        
+                        detected_heaps.append(new_detection)
+                        detectedLocations.append(currentLoc.latlng)
 
     # Display the image
-    cv2.imshow("image", img)
+    cv2.imshow("Mr_Bin Detection Feed", img)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 outputFile.close()
+cv2.destroyAllWindows()

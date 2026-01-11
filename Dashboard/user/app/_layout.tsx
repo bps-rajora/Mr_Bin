@@ -1,26 +1,27 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { router, Slot, useSegments } from "expo-router";
-
-import "../global.css";
-import { AuthContextProvider, useAuth } from "@/context/authContext";
+import { AuthContextProvider, useAuth } from "../context/authContext";
 
 const MainLayout = () => {
   const { isAuthenticated } = useAuth();
   const segments = useSegments();
 
   useEffect(() => {
-    // Check if user is authenticated or not
-    if (typeof isAuthenticated == "undefined") return;
-    const inApp = segments[0] == "(app)";
+    // 1. Wait for auth state to be loaded
+    if (typeof isAuthenticated === "undefined") return;
 
-    if (isAuthenticated && !inApp) {
-      // redirect to home
-      router.replace("home");
-    } else if (isAuthenticated == false) {
-      // redirect to sign in page
-      router.replace("signIn");
+    // 2. Check if user is inside the protected "(app)" group
+    const inAppGroup = segments[0] === "(app)";
+
+    if (isAuthenticated && !inAppGroup) {
+      // User is logged in but NOT in the app group -> Send to home
+      // Note: We use "/home" because (app) is a hidden group
+      router.replace("/home"); 
+    } else if (!isAuthenticated && inAppGroup) {
+      // User is NOT logged in but trying to access app screens -> Send to login
+      router.replace("/signIn");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, segments]);
 
   return <Slot />;
 };

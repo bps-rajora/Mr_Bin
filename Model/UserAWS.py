@@ -13,11 +13,11 @@ import geopandas as gpd
 from shapely.geometry import Point,shape
 
 # AWS S3 CONFIGURATION
-S3_BUCKET_NAME = "trashcambucket"
+S3_BUCKET_NAME = "Mr_Binbucket"
 S3_FOLDER_NAME = "users/" 
 PROCESSED_FOLDER_NAME = "userDetected/" 
 
-with open(r"D:\trashcam\delhi-zones.json", "r") as f:  
+with open(r"D:\Mr_Bin\delhi-zones.json", "r") as f:  
 
     geojson_data = json.load(f)
 
@@ -35,11 +35,11 @@ def find_ward(lat, lon):
 
 s3_client = boto3.client('s3')
 
-cred = credentials.Certificate(r"D:\\trashcam\\trashcam-7ec3f-firebase-adminsdk-1cvbd-2bd1a3aa2c.json")
+cred = credentials.Certificate(r"D:\\Mr_Bin\\Mr_Bin-7ec3f-firebase-adminsdk-1cvbd-2bd1a3aa2c.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-model = YOLO(r"D:\\trashcam\\latest.pt")
+model = YOLO(r"D:\\Mr_Bin\\latest.pt")
 
 classNames = ["garbage"]
 

@@ -11,10 +11,10 @@ from shapely.geometry import Point,shape
 import json
 
 
-S3_BUCKET_NAME = "trashcambucket"
+S3_BUCKET_NAME = "Mr_Binbucket"
 
 
-model = YOLO(r"D:\\trashcam\\latest.pt")
+model = YOLO(r"D:\\Mr_Bin\\latest.pt")
 s3_client = boto3.client("s3")
 
 classNames = ["garbage"]
